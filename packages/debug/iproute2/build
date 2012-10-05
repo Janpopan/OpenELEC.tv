@@ -4,8 +4,6 @@
 #      This file is part of OpenELEC - http://www.openelec.tv
 #      Copyright (C) 2009-2012 Stephan Raue (stephan@openelec.tv)
 #
-#  Boblightd addon maintained by Adam Boeglin: adamrb@gmail.com
-#
 #  This Program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2, or (at your option)
@@ -24,6 +22,22 @@
 
 . config/options $1
 
-[ -d $PKG_BUILD ] && rm -rf $PKG_BUILD
+cd $PKG_BUILD
 
-mv $BUILD/${PKG_NAME} $BUILD/$PKG_NAME-$PKG_VERSION
+$SED 's/$(CCOPTS)//' netem/Makefile
+
+# remove any old configfile
+  rm -rf ./Config
+
+# Makefile is busted so it never passes IPT_LIB_DIR properly
+  $SED "s/-DIPT/-DXT/" tc/Makefile
+  echo "TC_CONFIG_XT:=y" >> ./Config
+
+# arpd needs berkeleydb
+  $SED "/^TARGETS=/s: arpd : :" misc/Makefile
+  echo "IPT_LIB_DIR:=/usr/lib/xtables" >> ./Config
+
+# use setns from our libc
+  echo "IP_CONFIG_SETNS:=y" >> ./Config
+
+make CC="$TARGET_CC" CCOPTS="$TARGET_CFLAGS -D_GNU_SOURCE"
